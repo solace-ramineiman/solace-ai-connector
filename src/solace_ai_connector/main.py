@@ -163,7 +163,7 @@ def main():
             queue_size = full_config.get("trace_queue_size", 2048)
             schedule_delay = full_config.get("trace_schedule_delay", 100)
             print(connection_string, batch_size, queue_size, schedule_delay)
-            TracingUtils.init_tracing("http://localhost:4317", 1, 1, 100)
+            TracingUtils.init_tracing("http://localhost:4317", 1, 5, 100)
 
     # Create the connector instance
     sac = SolaceAiConnector(full_config, config_filenames=files)
