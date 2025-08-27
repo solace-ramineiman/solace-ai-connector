@@ -7,6 +7,7 @@ import argparse
 from dotenv import load_dotenv
 
 from .solace_ai_connector import SolaceAiConnector
+from .common.messaging.tracing_utils import TracingUtils
 
 
 def load_config(file):
@@ -117,6 +118,10 @@ def main():
         help="Load environment variables from a specified .env file.",
     )
     parser.add_argument(
+        "--broker-trace"
+        , action="store_true", help="Enable detailed broker messaging trace logging."
+    )
+    parser.add_argument(
         "config_files",
         metavar="<config.yaml>",
         type=str,
@@ -150,6 +155,15 @@ def main():
         config = load_config(file)
         # Merge the configuration into the full configuration
         full_config = merge_config(full_config, config)
+
+        if args.broker_trace:
+            print("CONFIG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            connection_string = full_config.get("trace_connection_string", "")
+            batch_size = full_config.get("trace_batch_size", 5)
+            queue_size = full_config.get("trace_queue_size", 2048)
+            schedule_delay = full_config.get("trace_schedule_delay", 100)
+            print(connection_string, batch_size, queue_size, schedule_delay)
+            TracingUtils.init_tracing("http://localhost:4317", 1, 1, 100)
 
     # Create the connector instance
     sac = SolaceAiConnector(full_config, config_filenames=files)

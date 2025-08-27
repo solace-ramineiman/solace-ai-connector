@@ -18,6 +18,8 @@ from ..common.monitoring import Monitoring
 from ..common.monitoring import Metrics
 from ..common import Message_NACK_Outcome
 from ..common.config_validation import validate_config_block
+from ..common.messaging.tracing_utils import TracingUtils
+from opentelemetry.trace import SpanKind
 
 DEFAULT_QUEUE_TIMEOUT_MS = 1000
 DEFAULT_QUEUE_MAX_DEPTH = 5
@@ -105,6 +107,14 @@ class ComponentBase:
     def process_event_with_tracing(self, event):
         if self.trace_queue:
             self.trace_event(event)
+        if TracingUtils.is_init and event.event_type == EventType.MESSAGE:
+            if event.data.extracted_ctx is None:
+                log.debug("No extracted_ctx found in message")
+            else:
+                with TracingUtils.tracer.start_as_current_span(f"{self.config.get("component_module", self.name)} solace_ai_connector_process",
+                                                                kind=SpanKind.CONSUMER,
+                                                                context=event.data.extracted_ctx) as consumer_context_span:
+                    pass
         self.process_event(event)
 
     def handle_component_error(self, e, event):

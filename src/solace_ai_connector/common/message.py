@@ -13,7 +13,7 @@ from ..common import Message_NACK_Outcome
 
 class Message:
 
-    def __init__(self, payload=None, topic=None, user_properties=None):
+    def __init__(self, payload=None, topic=None, user_properties=None, extracted_ctx=None):
         self.payload = payload
         self.topic = topic
         self.user_properties = user_properties or {}
@@ -25,6 +25,7 @@ class Message:
         self.keyword_args = {}
         self.invoke_data = None
         self.previous = None
+        self.extracted_ctx = extracted_ctx if extracted_ctx else None
 
     # This will return the specified data from the message. The expression is a string that
     # specifies the data to return. Has the following format:

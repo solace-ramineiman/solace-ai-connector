@@ -37,6 +37,16 @@ from .messaging import Messaging
 from ..log import log
 from ...common import Message_NACK_Outcome
 
+from opentelemetry.trace import SpanKind
+from solace_otel.messaging.trace.propagation import InboundMessageCarrier, InboundMessageGetter
+from .tracing_utils import TracingUtils
+
+from ...common.messaging.tracing_utils import TracingUtils
+from solace_otel.messaging.trace.propagation import InboundMessageCarrier, InboundMessageGetter, OutboundMessageCarrier, OutboundMessageSetter
+from opentelemetry.trace import SpanKind, set_span_in_context
+
+from solace.messaging.publisher.outbound_message import OutboundMessageBuilder
+from solace.messaging.messaging_service import MessagingService, PersistentMessagePublisherBuilder
 
 class ConnectionStatus(Enum):
     RECONNECTING = 2
@@ -471,6 +481,7 @@ class SolaceMessaging(Messaging):
         payload: str,
         user_properties: dict = None,
         user_context=None,
+        extracted_ctx=None
     ):
         # Create a topic destination
         destination = Topic.of(destination_name)
@@ -483,9 +494,25 @@ class SolaceMessaging(Messaging):
         elif isinstance(payload, bytes):
             payload = bytearray(payload)
 
+        ############HACK2########################
+        message = self.messaging_service.message_builder().build(payload)
+
+        if TracingUtils.is_init:
+            transport_context_carrier = OutboundMessageCarrier(message)
+            
+
+        if extracted_ctx is not None:
+            # inject trace context into message
+            with TracingUtils.tracer.start_as_current_span(f"{destination} solace_ai_connector_send", kind=SpanKind.PRODUCER,
+                                                            context=extracted_ctx) as transport_context_span:
+                extracted_ctx = set_span_in_context(transport_context_span)
+                TracingUtils.text_map.inject(carrier=transport_context_carrier, setter=OutboundMessageSetter())
+        else:
+            TracingUtils.text_map.inject(carrier=transport_context_carrier, setter=OutboundMessageSetter())
+
         # Publish the message
         self.publisher.publish(
-            message=payload,
+            message=message,
             destination=destination,
             additional_message_properties=user_properties,
             user_context=user_context,
@@ -495,6 +522,18 @@ class SolaceMessaging(Messaging):
         broker_message = self.persistent_receivers[0].receive_message(timeout_ms)
         if broker_message is None:
             return None
+        print("Received message: %s", broker_message)
+
+        ##############################HACK
+        receiver_context_carrier = InboundMessageCarrier(broker_message)
+        extracted_ctx = TracingUtils.text_map.extract(carrier=receiver_context_carrier, getter=InboundMessageGetter())
+        print(f"Context = {extracted_ctx}")
+        with TracingUtils.tracer.start_as_current_span(f"{broker_message.get_destination_name()} solace_ai_connector_receive",
+                                                        kind=SpanKind.CONSUMER,
+                                                        context=extracted_ctx) as receiver_context_span:
+            extracted_ctx = set_span_in_context(receiver_context_span)
+
+       
 
         # Convert Solace message to dictionary format
         return {
@@ -502,6 +541,7 @@ class SolaceMessaging(Messaging):
             or broker_message.get_payload_as_bytes(),
             "topic": broker_message.get_destination_name(),
             "user_properties": broker_message.get_properties(),
+            "extracted_ctx": extracted_ctx if TracingUtils.is_init else None,
             "_original_message": broker_message,  # Keep original message for acknowledgement
         }
 

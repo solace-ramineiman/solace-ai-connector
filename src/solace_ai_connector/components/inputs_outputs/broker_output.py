@@ -121,6 +121,7 @@ class BrokerOutput(BrokerBase):
             destination_name=topic,
             user_properties=user_properties,
             user_context=user_context,
+            extracted_ctx=message.extracted_ctx
         )
 
     def handle_message_ack_from_broker(self, context):

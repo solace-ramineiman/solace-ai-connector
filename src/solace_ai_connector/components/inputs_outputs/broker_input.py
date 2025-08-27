@@ -126,14 +126,17 @@ class BrokerInput(BrokerBase):
                 payload=None,
                 topic=None,
                 user_properties=None,
+                extracted_ctx=None,
             )
             payload = broker_message.get("payload")
             topic = broker_message.get("topic")
             user_properties = broker_message.get("user_properties", {})
+            extracted_ctx = broker_message.get("extracted_ctx", None)
 
             msg.payload = payload
             msg.topic = topic
             msg.user_properties = user_properties
+            msg.extracted_ctx = extracted_ctx
 
             # add nack callback to the message
             callback = (
