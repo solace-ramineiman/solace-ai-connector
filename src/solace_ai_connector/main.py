@@ -157,13 +157,12 @@ def main():
         full_config = merge_config(full_config, config)
 
         if args.broker_trace:
-            print("CONFIG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            connection_string = full_config.get("trace_connection_string", "")
-            batch_size = full_config.get("trace_batch_size", 5)
-            queue_size = full_config.get("trace_queue_size", 2048)
-            schedule_delay = full_config.get("trace_schedule_delay", 100)
-            print(connection_string, batch_size, queue_size, schedule_delay)
-            TracingUtils.init_tracing("http://localhost:4317", 1, 5, 100)
+            connection_string = os.environ.get("TRACE_CONNECTION_STRING", "")
+            batch_size = int(os.environ.get("TRACE_BATCH_SIZE", "5"))
+            queue_size = int(os.environ.get("TRACE_QUEUE_SIZE", "2048"))
+            schedule_delay = int(os.environ.get("TRACE_SCHEDULE_DELAY", "100"))
+            TracingUtils.init_tracing(connection_string, batch_size, queue_size, schedule_delay)
+            #TracingUtils.init_tracing("http://localhost:4317", 5, 2048, 100)
 
     # Create the connector instance
     sac = SolaceAiConnector(full_config, config_filenames=files)
