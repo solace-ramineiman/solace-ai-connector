@@ -2,9 +2,8 @@ from opentelemetry import trace, propagate
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 
 
 class TracingUtils:
@@ -27,10 +26,7 @@ class TracingUtils:
         else:
             exporter = InMemorySpanExporter()
 
-        processor = BatchSpanProcessor(exporter,
-                                       max_export_batch_size=batch_size,
-                                       max_queue_size=queue_size,
-                                       schedule_delay_millis=schedule_delay)
+        processor = SimpleSpanProcessor(exporter)
         provider.add_span_processor(processor)
 
         trace.set_tracer_provider(provider)
